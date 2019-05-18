@@ -1,0 +1,10 @@
+welcome: 'Welcome to Loan Calculator!'
+prompt_loan: 'Loan amount: '
+valid_loan_amount: 'Provide a valid number - Loan amount must be between $5,000 and $5,000,000: '
+prompt_apr:  "Annual Percentage Rate (APR) - do not include '%': "
+valid_apr: "Provide a valid number - Interest rate must be between 0.01 and 100%:"
+prompt_length_years: "Loan length - in year(s): "
+valid_yeart: "Provide a valid length in years - e.g. 1, 2, 3"
+continue_calculation: "Do you want to perform another calculation - answer 'y' to continue? "
+end: "Good bye!"
+
