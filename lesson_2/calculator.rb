@@ -100,7 +100,7 @@ loop do
   operation = ''
   loop do
     operation = Kernel.gets().chomp()
-    if %w(1 2 3 4 ).include?(operation)
+    if %w(1 2 3 4).include?(operation)
       break
     else
       prompt(MESSAGES['operator_error'])
