@@ -86,6 +86,10 @@ def display_match_won(player_score, computer_score)
   prompt('*** GAME OVER ***')
 end
 
+def won?(player, computer)
+compare_results(player, computer)
+end
+
 def match_end?(player_score, computer_score)
   player_score == 5 || computer_score == 5
 end
@@ -104,9 +108,9 @@ loop do
 
     display_choices(value_player_choice, value_computer_choice)
 
-    if message(value_player_choice, value_computer_choice) == 'You won!'
+    if won?(value_player_choice, value_computer_choice)
       count_player_win += 1
-    elsif message(value_player_choice, value_computer_choice) == 'Computer won!'
+    elsif won?(value_computer_choice, value_player_choice)
       count_computer_win += 1
     end
     display_score(count_player_win, count_computer_win)
