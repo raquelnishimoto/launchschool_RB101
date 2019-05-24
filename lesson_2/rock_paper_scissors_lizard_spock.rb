@@ -87,7 +87,7 @@ def display_match_won(player_score, computer_score)
 end
 
 def won?(player, computer)
-compare_results(player, computer)
+  compare_results(player, computer)
 end
 
 def match_end?(player_score, computer_score)
