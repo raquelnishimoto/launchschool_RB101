@@ -1,7 +1,7 @@
 require 'pry'
 require 'pry-byebug'
 
-FIRST_MOVE = 'player'
+FIRST_MOVE = 'choose'
 PLAYER = 'p'
 COMPUTER = 'c'
 INITIAL_MARKER = ' '
@@ -140,11 +140,11 @@ def display_winner(count_player, count_computer)
   return 'Computer' if count_computer >= 5
 end
 
-def display_score(board)
+def display_score(board, count_match)
   if someone_won?(board)
-    prompt_msg("#{detect_winner?(board)} won!")
+    prompt_msg("Round -> #{count_match}! #{detect_winner?(board)} won!")
   else
-    prompt_msg("It's a tie!")
+    prompt_msg("Round -> #{count_match}! It's a tie!")
   end
 end
 
@@ -159,6 +159,7 @@ loop do
   count_computer = 0
   count_match = 0
   current_player = nil
+  answer = nil
 
   loop do
     board = initialise_board
@@ -193,8 +194,8 @@ loop do
       prompt_msg("#{display_winner(count_player, count_computer)} wins game!")
       prompt_msg("Play GAME again - 'y' or 'n'? ")
     else
-      display_score(board)
-      prompt_msg("Round -> #{count_match}! Continue - 'y' or 'n'? ")
+      display_score(board, count_match)
+      prompt_msg("Continue - 'y' or 'n'? ")
     end
     answer = gets.chomp
     break unless answer.downcase == 'y'
