@@ -1,7 +1,6 @@
-require 'pry'
-require 'pry-byebug'
-
 FIRST_MOVE = 'choose'
+ROUNDS_TO_WIN = 5
+MID_SQUARE = 5
 PLAYER = 'p'
 COMPUTER = 'c'
 INITIAL_MARKER = ' '
@@ -23,11 +22,11 @@ end
 
 # rubocop:disable Metrics/MethodLength
 # rubocop:disable Metrics/AbcSize
-def display_board(brd, count_player, count_computer)
+def display_board(brd, player_score, computer_score)
   system 'clear'
   prompt_msg("You are #{PLAYER_MARKER}. Computer is #{COMPUTER_MARKER}")
-  prompt_msg("Win 5 matches to win the game!")
-  prompt_msg("Score: Player #{count_player} Vs. Computer #{count_computer}")
+  prompt_msg("Win #{ROUNDS_TO_WIN} matches to win the game!")
+  prompt_msg("Score: Player #{player_score} Vs. Computer #{computer_score}")
   puts ""
   puts "     |     |"
   puts "  #{brd[1]}  |  #{brd[2]}  |  #{brd[3]}"
@@ -82,35 +81,26 @@ def player_place_piece!(brd)
   square = ''
   loop do
     prompt_msg("Choose a square (#{joinor(empty_squares(brd))}): ")
-    square = gets.chomp.to_i
-    break if empty_squares(brd).include?(square)
-    prompt_msg("Square does not exist or option is invalid!")
+    square = gets.chomp
+    break if valid?(square) && empty_squares(brd).include?(square.to_i)
+    prompt_msg("Square is not empty or option is invalid!")
   end
-  brd[square] = PLAYER_MARKER
+  brd[square.to_i] = PLAYER_MARKER
 end
 
 def computer_place_piece!(brd)
-  square = attack!(brd)
-  square = defend!(brd) if !square
-  square = 5 if !square && brd[5] == INITIAL_MARKER
+  square = attack_or_defend!(brd, COMPUTER_MARKER)
+  square = attack_or_defend!(brd, PLAYER_MARKER) if !square
+  square = MID_SQUARE if !square && brd[MID_SQUARE] == INITIAL_MARKER
   square = empty_squares(brd).sample if !square
 
   brd[square] = COMPUTER_MARKER
 end
 
-def attack!(brd)
+def attack_or_defend!(brd, marker)
   square = nil
   WINNING_OPTIONS.each do |line|
-    square = find_at_risk_square(line, brd, COMPUTER_MARKER)
-    break if square
-  end
-  square
-end
-
-def defend!(brd)
-  square = nil
-  WINNING_OPTIONS.each do |line|
-    square = find_at_risk_square(line, brd, PLAYER_MARKER)
+    square = find_at_risk_square(line, brd, marker)
     break if square
   end
   square
@@ -135,9 +125,13 @@ def detect_winner?(brd)
   nil
 end
 
-def display_winner(count_player, count_computer)
-  return 'Player' if count_player >= 5
-  return 'Computer' if count_computer >= 5
+def winner(player_score, computer_score)
+  return 'Player' if player_score >= ROUNDS_TO_WIN
+  return 'Computer' if computer_score >= ROUNDS_TO_WIN
+end
+
+def match_ended?(player_score, computer_score)
+  player_score >= ROUNDS_TO_WIN || computer_score >= ROUNDS_TO_WIN
 end
 
 def display_score(board, count_match)
@@ -154,22 +148,39 @@ def find_at_risk_square(line, board, marker)
   end
 end
 
+def valid_exit?(input)
+  input.downcase == 'n' || input.downcase == 'no'
+end
+
+def play_again?(input)
+  input.downcase == 'y' || input.downcase == 'yes'
+end
+
+def valid?(input)
+  input == input.to_i.to_s
+end
+
+def continue_game
+  prompt_msg("Press any key to continue game\r")
+  gets
+end
+
 loop do
-  count_player = 0
-  count_computer = 0
+  player_score = 0
+  computer_score = 0
   count_match = 0
   current_player = nil
   answer = nil
 
   loop do
     board = initialise_board
-    display_board(board, count_player, count_computer)
+    display_board(board, player_score, computer_score)
 
     case FIRST_MOVE
     when 'choose' then
       loop do
         prompt_msg(FIRST_MOVE_MESSAGE)
-        current_player = gets.chomp
+        current_player = gets.chomp.downcase
         break if current_player == PLAYER || current_player == COMPUTER
         prompt_msg('Invalid choice.')
       end
@@ -178,31 +189,33 @@ loop do
     end
 
     loop do
-      display_board(board, count_player, count_computer)
+      display_board(board, player_score, computer_score)
       place_piece!(board, current_player)
       current_player = alternate_player(current_player)
       break if someone_won?(board) || board_full?(board)
     end
 
-    display_board(board, count_player, count_computer)
+    display_board(board, player_score, computer_score)
 
     count_match += 1
-    count_player += 1 if detect_winner?(board) == 'Player'
-    count_computer += 1 if detect_winner?(board) == 'Computer'
+    player_score += 1 if detect_winner?(board) == 'Player'
+    computer_score += 1 if detect_winner?(board) == 'Computer'
 
-    if !!display_winner(count_player, count_computer)
-      prompt_msg("#{display_winner(count_player, count_computer)} wins game!")
+    if match_ended?(player_score, computer_score)
+      prompt_msg("#{winner(player_score, computer_score)} wins game!")
       prompt_msg("Play GAME again - 'y' or 'n'? ")
+      loop do
+        answer = gets.chomp
+        break if valid_exit?(answer) || play_again?(answer)
+        prompt_msg('Invalid answer. Try again.')
+      end
     else
       display_score(board, count_match)
-      prompt_msg("Continue - 'y' or 'n'? ")
+      continue_game
     end
-    answer = gets.chomp
-    break unless answer.downcase == 'y'
-    prompt_msg('Invalid answer. Try again.')
+    break if match_ended?(player_score, computer_score)
   end
-  break if !!display_winner(count_player, count_computer)
-  break unless answer.downcase == 'y'
+  break unless play_again?(answer)
 end
 
 prompt_msg('Thanks for playing Tic Tac Toe! See you next time :-)')
