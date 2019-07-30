@@ -1,33 +1,12 @@
-DECK =
-  [['C', '2'], ['C', '3'], ['C', '4'], ['C', '5'], ['C', '6']] +
-  [['C', '7'], ['C', '8'], ['C', '9'], ['C', '10'], ['C', 'J']] +
-  [['C', 'Q'], ['C', 'K'], ['C', 'A']] + # clubs
-  [['D', '2'], ['D', '3'], ['D', '4'], ['D', '5'], ['D', '6']] +
-  [['D', '7'], ['D', '8'], ['D', '9'], ['D', '10'], ['D', 'J']] +
-  [['D', 'Q'], ['D', 'K'], ['D', 'A']] + # diamonds
-  [['H', '2'], ['H', '3'], ['H', '4'], ['H', '5'], ['H', '6']] +
-  [['H', '7'], ['H', '8'], ['H', '9'], ['H', '10'], ['H', 'J']] +
-  [['H', 'Q'], ['H', 'K'], ['H', 'A']] + # hearts
-  [['S', '2'], ['S', '3'], ['S', '4'], ['S', '5'], ['S', '6']] +
-  [['S', '7'], ['S', '8'], ['S', '9'], ['S', '10'], ['S', 'J']] +
-  [['S', 'Q'], ['S', 'K'], ['S', 'A']] # spades
+require 'io/console'
 
-DECK_VALUE = { '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6,
-               '7' => 7, '8' => 8, '9' => 9, '10' => 10,
-               'Jack' => 10, 'Queen' => 10, 'King' => 10,
-               'Ace' => 11 }
+DECK_RANKS = %w(2 3 4 5 6 7 8 9 10 Jack Queen King Ace)
 
-DECK_CARDS = { '2' => '2', '3' => '3', '4' => '4', '5' => '5',
-               '6' => '6', '7' => '7', '8' => '8', '9' => '9',
-               '10' => '10', 'J' => 'Jack', 'Q' => 'Queen',
-               'K' => 'King', 'A' => 'Ace' }
-
-DECK_TYPES = { 'C' => 'Club', 'D' => 'Diamonds',
-               'H' => 'Hearts', 'S' => 'Spades' }
+DECK_TYPES = %w(Club Diamonds Hearts Spades)
 
 HIT = 'h'
 STAY = 's'
-BUSTED_VALUE = 21
+THRESHOLD_TO_BUST = 21
 DEALER_LIMIT = 17
 SCORE_TO_WIN = 5
 
@@ -35,15 +14,14 @@ def prompt(message)
   puts "=> #{message}"
 end
 
-TO_ACTION_MESSAGE = <<-MSG
+OPTIONS_MESSAGE = <<-MSG
 ==================================================================
 Do you want another card ('hit') or sit on what you have ('stay')?
 -> Select 'h' for 'hit' or 's' for 'stay'
 MSG
 
-def initialise_deck(player, player_total, dealer)
-  prompt("Dealer has: #{face_up_cards(dealer, false)}")
-  prompt("You have: #{face_up_cards(player)}, for a total of #{player_total}.")
+def intialise_deck
+  DECK_TYPES.product(DECK_RANKS).shuffle
 end
 
 def display_score(game_round, player_score, dealer_score)
@@ -51,24 +29,18 @@ def display_score(game_round, player_score, dealer_score)
   prompt("Score #{SCORE_TO_WIN} rounds to win game.")
   prompt("Round: #{game_round}.")
   prompt("Player #{player_score} Vs. Delear #{dealer_score}.")
-  puts("------------------------------------------------------")
+  puts '------------------------------------------------------'
 end
 
-def shuffle_cards(qty)
-  DECK.sample(qty)
-end
-
-def deal_cards(qty)
+def deal_cards(qty, deck)
   dealt_cards = []
-  cards = shuffle_cards(qty).map { |card| card }
-  cards.map do |type, rank|
-    dealt_cards << DECK_TYPES.values_at(type)
-    dealt_cards << DECK_CARDS.values_at(rank)
+  qty.times do |_|
+    dealt_cards << deck.pop
   end
   dealt_cards
 end
 
-def get_join_array(array)
+def join_with_hyphen(array)
   array = array.flatten
   iteration = array.size / 2
   type = 0
@@ -84,7 +56,7 @@ def get_join_array(array)
 end
 
 def join(array, limit = '; ', word = 'and')
-  cards = get_join_array(array)
+  cards = join_with_hyphen(array)
 
   case cards.size
   when 0 then ''
@@ -96,51 +68,44 @@ def join(array, limit = '; ', word = 'and')
   end
 end
 
-def face_up_cards(recipient, player_turn = true)
-  if player_turn == true
-    join(recipient)
-  else
-    "#{join(recipient[0..1])} and unknown card"
-  end
-end
-
 def show_all_cards(recipient, cards, total)
-  prompt("#{recipient} shows: #{face_up_cards(cards)} with total of: #{total}.")
+  prompt("#{recipient} shows: #{join(cards)} with total of: #{total}.")
 end
 
-def sum_cards(player)
+def total(player)
+  sum = 0
   player = player.flatten
 
   select_value = player.each_index.select(&:odd?)
-  cards_value = player.values_at(*select_value).map do |card|
-    DECK_VALUE.values_at(card)[0]
+  player.values_at(*select_value).each do |rank|
+    sum += if rank == 'Ace'
+             11
+           elsif rank.to_i == 0
+             10
+           else
+             rank.to_i
+           end
   end
-  sum = cards_value.sum
 
-  if player.any?('Ace') && sum > BUSTED_VALUE
-    sum -= 10
-  else
-    sum
-  end
-  sum
+  player.any?('Ace') && sum > THRESHOLD_TO_BUST ? sum -= 10 : sum
 end
 
 def detect_result(player_total, dealer_total)
-  if dealer_total > BUSTED_VALUE
+  if dealer_total > THRESHOLD_TO_BUST
     :dealer_busted
-  elsif player_total > BUSTED_VALUE
+  elsif player_total > THRESHOLD_TO_BUST
     :player_busted
   elsif dealer_total > player_total
-    :dealer_wins
+    :dealer_win
   elsif player_total > dealer_total
-    :player_wins
+    :player_win
   else
     :tie
   end
 end
 
 def busted?(recipient_total)
-  recipient_total > BUSTED_VALUE
+  recipient_total > THRESHOLD_TO_BUST
 end
 
 def display_result(player_total, dealer_total)
@@ -151,9 +116,9 @@ def display_result(player_total, dealer_total)
     prompt("Dealer busted! Player wins this round!")
   when :player_busted
     prompt("You busted! Dealer wins this round")
-  when :player_wins
+  when :player_win
     prompt("Player wins this round!")
-  when :dealer_wins
+  when :dealer_win
     prompt("Dealer wins this round!")
   when :tie
     prompt("It's a push, no one wins!")
@@ -201,8 +166,9 @@ def stand?(dealer_total)
 end
 
 def continue_game?
-  prompt("Press any key to continue game:\r")
-  gets
+  prompt("Press any key to continue game:")
+  STDIN.getch
+  puts '------------------------------------------------------'
 end
 
 def game_over?(player_score, dealer_score)
@@ -223,29 +189,31 @@ loop do
   game_round = 1
 
   loop do
-    player = deal_cards(2)
-    dealer = deal_cards(2)
-    player_total = sum_cards(player)
-    dealer_total = sum_cards(dealer)
+    deck = intialise_deck
+    player_cards = deal_cards(2, deck)
+    dealer_cards = deal_cards(2, deck)
+    player_total = total(player_cards)
+    dealer_total = total(dealer_cards)
 
     display_score(game_round, player_score, dealer_score)
-    initialise_deck(player, player_total, dealer)
+    prompt("Dealer has: #{join(dealer_cards[0])} and unknown card")
+    prompt("You have: #{join(player_cards)}, for a total of #{player_total}.")
 
     answer = nil
 
     loop do
       loop do
-        puts(TO_ACTION_MESSAGE)
+        puts(OPTIONS_MESSAGE)
         answer = gets.chomp
         break if valid_hit?(answer) || valid_stay?(answer)
         invalid_answer
       end
       break if valid_stay?(answer)
-      player << deal_cards(1)
-      player_total = sum_cards(player)
+      player_cards << deal_cards(1, deck)
+      player_total = total(player_cards)
       system 'clear'
-      prompt("Dealer has: #{face_up_cards(dealer, false)}.")
-      show_all_cards("You", player, player_total)
+      prompt("Dealer has: #{join(dealer_cards[0])} and unknown card")
+      show_all_cards("You", player_cards, player_total)
       break if busted?(player_total)
     end
 
@@ -261,14 +229,14 @@ loop do
     end
 
     if valid_stay?(answer)
-      show_all_cards("Dealer", dealer, dealer_total)
+      show_all_cards("Dealer", dealer_cards, dealer_total)
       loop do
         break if stand?(dealer_total)
         prompt("Dealer decides to hit and take another card.")
         continue_game?
-        dealer << deal_cards(1)
-        dealer_total = sum_cards(dealer)
-        show_all_cards("Dealer", dealer, dealer_total)
+        dealer_cards << deal_cards(1, deck)
+        dealer_total = total(dealer_cards)
+        show_all_cards("Dealer", dealer_cards, dealer_total)
         break if busted?(dealer_total)
       end
 
@@ -282,8 +250,8 @@ loop do
         continue_game?
         display_result(player_total, dealer_total)
         result = detect_result(player_total, dealer_total)
-        player_score += 1 if result == :player_wins
-        dealer_score += 1 if result == :dealer_wins
+        player_score += 1 if result == :player_win
+        dealer_score += 1 if result == :dealer_win
         continue_game?
       end
       game_round += 1
